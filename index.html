@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>COSMONAUT // EXPLORE THE VOID</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --void: #01000a;
+      --deep: #04011c;
+      --nebula-purple: #6b21e8;
+      --nebula-pink: #e8219c;
+      --nebula-cyan: #21e8d4;
+      --star-white: #f0eeff;
+      --dust: #8b7fa8;
+      --glow-purple: rgba(107,33,232,0.6);
+      --glow-cyan: rgba(33,232,212,0.5);
+      --glow-pink: rgba(232,33,156,0.5);
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--void);
+      color: var(--star-white);
+      font-family: 'Space Mono', monospace;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* CUSTOM CURSOR */
+    .cursor {
+      position: fixed;
+      width: 12px; height: 12px;
+      background: var(--nebula-cyan);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%,-50%);
+      transition: transform 0.1s, width 0.2s, height 0.2s, background 0.2s;
+      mix-blend-mode: screen;
+    }
+    .cursor-ring {
+      position: fixed;
+      width: 36px; height: 36px;
+      border: 1px solid var(--nebula-cyan);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%,-50%);
+      transition: transform 0.15s ease-out, width 0.3s, height 0.3s;
+      opacity: 0.6;
+    }
+
+    /* STARS CANVAS */
+    #stars-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* NOISE OVERLAY */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      background-size: 200px 200px;
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.5;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem 4rem;
+      border-bottom: 1px solid rgba(107,33,232,0.15);
+      background: rgba(1,0,10,0.7);
+      backdrop-filter: blur(20px);
+    }
+    .nav-logo {
+      font-family: 'Orbitron', monospace;
+      font-weight: 900;
+      font-size: 1rem;
+      letter-spacing: 0.3em;
+      color: var(--nebula-cyan);
+      text-shadow: 0 0 20px var(--glow-cyan);
+    }
+    .nav-links {
+      display: flex;
+      gap: 2.5rem;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--dust);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      transition: color 0.3s, text-shadow 0.3s;
+    }
+    .nav-links a:hover {
+      color: var(--nebula-cyan);
+      text-shadow: 0 0 15px var(--glow-cyan);
+    }
+    .nav-btn {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      padding: 0.6rem 1.4rem;
+      border: 1px solid var(--nebula-purple);
+      background: transparent;
+      color: var(--nebula-purple);
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .nav-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--nebula-purple);
+      transform: translateX(-100%);
+      transition: transform 0.3s;
+      z-index: -1;
+    }
+    .nav-btn:hover { color: #fff; text-shadow: none; }
+    .nav-btn:hover::before { transform: translateX(0); }
+
+    /* HERO */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      z-index: 2;
+      padding: 8rem 2rem 4rem;
+      overflow: hidden;
+    }
+
+    /* PLANET */
+    .planet {
+      position: absolute;
+      bottom: -120px; left: 50%;
+      transform: translateX(-50%);
+      width: 700px; height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%,
+        #1a0a4a 0%,
+        #0d0530 40%,
+        #080020 70%,
+        #020010 100%
+      );
+      box-shadow:
+        0 0 80px 20px rgba(107,33,232,0.3),
+        inset 0 0 60px rgba(33,232,212,0.05),
+        0 0 200px 60px rgba(107,33,232,0.1);
+      animation: planetFloat 8s ease-in-out infinite;
+    }
+    .planet::before {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      background: conic-gradient(
+        transparent 0deg,
+        rgba(107,33,232,0.3) 60deg,
+        rgba(33,232,212,0.2) 120deg,
+        transparent 180deg,
+        rgba(232,33,156,0.2) 240deg,
+        transparent 360deg
+      );
+      animation: ringRotate 12s linear infinite;
+      filter: blur(3px);
+    }
+    .planet-ring {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) rotateX(75deg);
+      width: 110%; height: 110%;
+      border-radius: 50%;
+      border: 18px solid transparent;
+      border-top-color: rgba(107,33,232,0.4);
+      border-bottom-color: rgba(33,232,212,0.3);
+      animation: ringRotate 16s linear infinite;
+    }
+    @keyframes planetFloat {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(-20px); }
+    }
+    @keyframes ringRotate {
+      from { transform: translate(-50%,-50%) rotateX(75deg) rotateZ(0deg); }
+      to { transform: translate(-50%,-50%) rotateX(75deg) rotateZ(360deg); }
+    }
+
+    /* ASTRONAUT */
+    .astronaut-wrap {
+      position: relative;
+      z-index: 10;
+      animation: float 6s ease-in-out infinite;
+      margin-bottom: 3rem;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(-2deg); }
+      50% { transform: translateY(-30px) rotate(2deg); }
+    }
+    .astronaut-svg { width: 180px; filter: drop-shadow(0 0 30px rgba(33,232,212,0.5)); }
+
+    .hero-eyebrow {
+      font-size: 0.7rem;
+      letter-spacing: 0.5em;
+      text-transform: uppercase;
+      color: var(--nebula-cyan);
+      text-shadow: 0 0 15px var(--glow-cyan);
+      margin-bottom: 1.5rem;
+      animation: fadeUp 1s ease both 0.2s;
+    }
+    .hero-title {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(3rem, 9vw, 8rem);
+      font-weight: 900;
+      line-height: 0.9;
+      letter-spacing: -0.02em;
+      margin-bottom: 1.5rem;
+      animation: fadeUp 1s ease both 0.4s;
+    }
+    .hero-title span.glow-text {
+      display: block;
+      background: linear-gradient(135deg, var(--nebula-cyan) 0%, var(--nebula-purple) 50%, var(--nebula-pink) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 40px rgba(107,33,232,0.8));
+    }
+    .hero-sub {
+      font-size: 0.85rem;
+      color: var(--dust);
+      line-height: 1.8;
+      max-width: 520px;
+      margin: 0 auto 3rem;
+      animation: fadeUp 1s ease both 0.6s;
+    }
+
+    .hero-ctas {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      animation: fadeUp 1s ease both 0.8s;
+    }
+    .btn-primary {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      padding: 1rem 2.5rem;
+      background: linear-gradient(135deg, var(--nebula-purple), var(--nebula-pink));
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      text-transform: uppercase;
+      text-decoration: none;
+      position: relative;
+      overflow: hidden;
+      clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+      transition: transform 0.2s, box-shadow 0.3s;
+      box-shadow: 0 0 30px var(--glow-purple);
+    }
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 0 50px var(--glow-purple), 0 0 80px var(--glow-pink);
+    }
+    .btn-secondary {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      padding: 1rem 2.5rem;
+      background: transparent;
+      border: 1px solid rgba(33,232,212,0.5);
+      color: var(--nebula-cyan);
+      cursor: pointer;
+      text-transform: uppercase;
+      text-decoration: none;
+      clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+      transition: all 0.3s;
+    }
+    .btn-secondary:hover {
+      background: rgba(33,232,212,0.08);
+      border-color: var(--nebula-cyan);
+      box-shadow: 0 0 30px var(--glow-cyan);
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* SCROLL INDICATOR */
+    .scroll-hint {
+      position: absolute;
+      bottom: 2.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--dust);
+      font-size: 0.6rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      animation: fadeUp 1s ease both 1.2s;
+    }
+    .scroll-line {
+      width: 1px;
+      height: 50px;
+      background: linear-gradient(to bottom, var(--nebula-purple), transparent);
+      animation: scrollPulse 2s ease-in-out infinite;
+    }
+    @keyframes scrollPulse {
+      0%, 100% { opacity: 0.3; transform: scaleY(1); }
+      50% { opacity: 1; transform: scaleY(1.2); }
+    }
+
+    /* SECTION BASE */
+    section {
+      position: relative;
+      z-index: 2;
+      padding: 8rem 4rem;
+    }
+    .section-label {
+      font-size: 0.65rem;
+      letter-spacing: 0.5em;
+      text-transform: uppercase;
+      color: var(--nebula-pink);
+      margin-bottom: 1rem;
+    }
+    .section-title {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(2rem, 4vw, 3.5rem);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 2rem;
+    }
+
+    /* STATS BAR */
+    .stats-bar {
+      background: linear-gradient(90deg, rgba(107,33,232,0.1), rgba(33,232,212,0.1), rgba(232,33,156,0.1));
+      border-top: 1px solid rgba(107,33,232,0.2);
+      border-bottom: 1px solid rgba(33,232,212,0.2);
+      padding: 2.5rem 4rem;
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 2rem;
+      z-index: 2;
+      position: relative;
+    }
+    .stat-item { text-align: center; }
+    .stat-num {
+      font-family: 'Orbitron', monospace;
+      font-size: 2.5rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--nebula-cyan), var(--nebula-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-label { font-size: 0.65rem; letter-spacing: 0.3em; color: var(--dust); text-transform: uppercase; margin-top: 0.3rem; }
+
+    /* MISSIONS GRID */
+    .missions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-top: 4rem;
+    }
+    .mission-card {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(107,33,232,0.15);
+      padding: 2.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+      cursor: default;
+    }
+    .mission-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 3px;
+      background: linear-gradient(90deg, var(--nebula-purple), var(--nebula-cyan));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.4s;
+    }
+    .mission-card:hover { transform: translateY(-6px); border-color: rgba(107,33,232,0.5); box-shadow: 0 20px 60px rgba(107,33,232,0.15); }
+    .mission-card:hover::before { transform: scaleX(1); }
+    .mission-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1.5rem;
+      display: block;
+      filter: drop-shadow(0 0 10px rgba(33,232,212,0.5));
+    }
+    .mission-number {
+      position: absolute;
+      top: 2rem; right: 2rem;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.6rem;
+      color: rgba(107,33,232,0.4);
+      letter-spacing: 0.2em;
+    }
+    .mission-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: var(--star-white);
+    }
+    .mission-desc { font-size: 0.8rem; line-height: 1.8; color: var(--dust); }
+
+    /* GITHUB SECTION */
+    .github-section {
+      background: radial-gradient(ellipse at center, rgba(107,33,232,0.08) 0%, transparent 70%);
+      text-align: center;
+    }
+    .github-card {
+      max-width: 700px;
+      margin: 4rem auto 0;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(107,33,232,0.25);
+      padding: 4rem;
+      position: relative;
+    }
+    .github-card::before, .github-card::after {
+      content: '';
+      position: absolute;
+      width: 20px; height: 20px;
+      border-color: var(--nebula-cyan);
+      border-style: solid;
+    }
+    .github-card::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+    .github-card::after { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+    .github-icon { font-size: 4rem; margin-bottom: 1.5rem; display: block; }
+    .github-card h3 {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .github-card p { color: var(--dust); font-size: 0.8rem; line-height: 1.8; margin-bottom: 2rem; }
+    .fork-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(33,232,212,0.08);
+      border: 1px solid rgba(33,232,212,0.3);
+      padding: 0.5rem 1.2rem;
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      color: var(--nebula-cyan);
+      margin-bottom: 2rem;
+    }
+
+    /* TERMINAL */
+    .terminal {
+      background: rgba(0,0,0,0.6);
+      border: 1px solid rgba(33,232,212,0.2);
+      padding: 1.5rem 2rem;
+      text-align: left;
+      font-size: 0.8rem;
+      margin: 2rem auto;
+      max-width: 600px;
+      position: relative;
+    }
+    .terminal::before {
+      content: '● ● ●';
+      display: block;
+      color: rgba(107,33,232,0.5);
+      margin-bottom: 1rem;
+      letter-spacing: 0.4em;
+      font-size: 0.6rem;
+    }
+    .term-line { margin: 0.3rem 0; }
+    .term-prompt { color: var(--nebula-purple); }
+    .term-cmd { color: var(--nebula-cyan); }
+    .term-out { color: var(--dust); }
+    .term-cursor {
+      display: inline-block;
+      width: 8px; height: 14px;
+      background: var(--nebula-cyan);
+      animation: blink 1s step-end infinite;
+      vertical-align: middle;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* FOOTER */
+    footer {
+      position: relative;
+      z-index: 2;
+      border-top: 1px solid rgba(107,33,232,0.15);
+      padding: 3rem 4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .footer-logo {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.85rem;
+      letter-spacing: 0.3em;
+      color: var(--nebula-cyan);
+    }
+    .footer-text { font-size: 0.7rem; color: var(--dust); letter-spacing: 0.1em; }
+    .footer-links { display: flex; gap: 2rem; }
+    .footer-links a { font-size: 0.7rem; color: var(--dust); text-decoration: none; letter-spacing: 0.1em; transition: color 0.3s; }
+    .footer-links a:hover { color: var(--nebula-cyan); }
+
+    /* NEBULA BG BLOBS */
+    .nebula-blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.12;
+    }
+    .nb-1 { width: 600px; height: 600px; background: var(--nebula-purple); top: -200px; right: -100px; animation: blobDrift 20s ease-in-out infinite alternate; }
+    .nb-2 { width: 500px; height: 500px; background: var(--nebula-cyan); bottom: 20%; left: -150px; animation: blobDrift 25s ease-in-out infinite alternate-reverse; }
+    .nb-3 { width: 400px; height: 400px; background: var(--nebula-pink); top: 50%; right: 10%; animation: blobDrift 18s ease-in-out infinite alternate; }
+    @keyframes blobDrift {
+      from { transform: translate(0, 0) scale(1); }
+      to { transform: translate(40px, 30px) scale(1.1); }
+    }
+
+    /* REVEAL ANIMATION */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NEBULA BLOBS -->
+<div class="nebula-blob nb-1"></div>
+<div class="nebula-blob nb-2"></div>
+<div class="nebula-blob nb-3"></div>
+
+<!-- STARS CANVAS -->
+<canvas id="stars-canvas"></canvas>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">✦ COSMONAUT</div>
+  <ul class="nav-links">
+    <li><a href="#missions">Misiones</a></li>
+    <li><a href="#github">Fork</a></li>
+    <li><a href="#about">Acerca</a></li>
+  </ul>
+  <button class="nav-btn">⬡ Iniciar Sesión</button>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="astronaut-wrap">
+    <svg class="astronaut-svg" viewBox="0 0 200 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Jetpack -->
+      <rect x="75" y="130" width="50" height="60" rx="8" fill="#1a0a3a" stroke="#6b21e8" stroke-width="1.5"/>
+      <rect x="80" y="145" width="12" height="8" rx="2" fill="#21e8d4" opacity="0.7"/>
+      <rect x="108" y="145" width="12" height="8" rx="2" fill="#21e8d4" opacity="0.7"/>
+      <!-- Thrusters -->
+      <ellipse cx="86" cy="194" rx="7" ry="5" fill="#e8219c" opacity="0.8"/>
+      <ellipse cx="114" cy="194" rx="7" ry="5" fill="#e8219c" opacity="0.8"/>
+      <ellipse cx="86" cy="196" rx="4" ry="8" fill="#21e8d4" opacity="0.5"/>
+      <ellipse cx="114" cy="196" rx="4" ry="8" fill="#21e8d4" opacity="0.5"/>
+      <!-- Body suit -->
+      <rect x="68" y="125" width="64" height="70" rx="12" fill="#120530" stroke="#6b21e8" stroke-width="1.5"/>
+      <!-- Chest detail -->
+      <rect x="80" y="135" width="40" height="25" rx="4" fill="#1a0a4a" stroke="#21e8d4" stroke-width="1"/>
+      <circle cx="100" cy="147" r="6" fill="#21e8d4" opacity="0.3"/>
+      <circle cx="100" cy="147" r="3" fill="#21e8d4"/>
+      <!-- Arms -->
+      <rect x="40" y="125" width="28" height="15" rx="7" fill="#120530" stroke="#6b21e8" stroke-width="1.5"/>
+      <rect x="132" y="125" width="28" height="15" rx="7" fill="#120530" stroke="#6b21e8" stroke-width="1.5"/>
+      <!-- Gloves -->
+      <ellipse cx="42" cy="145" rx="10" ry="8" fill="#21e8d4" opacity="0.6"/>
+      <ellipse cx="158" cy="145" rx="10" ry="8" fill="#21e8d4" opacity="0.6"/>
+      <!-- Helmet -->
+      <ellipse cx="100" cy="95" rx="42" ry="45" fill="#1a0a3a" stroke="#6b21e8" stroke-width="2"/>
+      <!-- Visor -->
+      <ellipse cx="100" cy="93" rx="28" ry="30" fill="#0d0530"/>
+      <ellipse cx="100" cy="93" rx="26" ry="28" fill="url(#visorGrad)"/>
+      <!-- Visor reflections -->
+      <ellipse cx="88" cy="80" rx="8" ry="5" fill="white" opacity="0.1" transform="rotate(-20 88 80)"/>
+      <ellipse cx="112" cy="85" rx="4" ry="3" fill="white" opacity="0.07" transform="rotate(15 112 85)"/>
+      <!-- Helmet detail -->
+      <path d="M65 85 Q100 55 135 85" stroke="#21e8d4" stroke-width="1" fill="none" opacity="0.3"/>
+      <!-- Antenna -->
+      <line x1="100" y1="50" x2="100" y2="30" stroke="#6b21e8" stroke-width="2"/>
+      <circle cx="100" cy="27" r="4" fill="#e8219c"/>
+      <circle cx="100" cy="27" r="2" fill="#fff"/>
+      <!-- Legs -->
+      <rect x="75" y="192" width="20" height="35" rx="6" fill="#120530" stroke="#6b21e8" stroke-width="1.5"/>
+      <rect x="105" y="192" width="20" height="35" rx="6" fill="#120530" stroke="#6b21e8" stroke-width="1.5"/>
+      <!-- Boots -->
+      <rect x="72" y="222" width="26" height="14" rx="5" fill="#0d0220" stroke="#6b21e8" stroke-width="1.5"/>
+      <rect x="102" y="222" width="26" height="14" rx="5" fill="#0d0220" stroke="#6b21e8" stroke-width="1.5"/>
+      <defs>
+        <radialGradient id="visorGrad" cx="40%" cy="35%">
+          <stop offset="0%" stop-color="#1a3a6a"/>
+          <stop offset="50%" stop-color="#0a1a4a"/>
+          <stop offset="100%" stop-color="#050a1a"/>
+        </radialGradient>
+      </defs>
+    </svg>
+  </div>
+
+  <p class="hero-eyebrow">✦ Misión estelar activa // Año 2157</p>
+  <h1 class="hero-title">
+    <span>EXPLORA</span>
+    <span class="glow-text">EL VACÍO</span>
+  </h1>
+  <p class="hero-sub">
+    Un proyecto de código abierto para cartografiar el universo digital.<br/>
+    Haz fork, contribuye, y deja tu huella en la galaxia.
+  </p>
+  <div class="hero-ctas">
+    <a href="#github" class="btn-primary">⬡ Hacer Fork</a>
+    <a href="#missions" class="btn-secondary">▶ Ver Misiones</a>
+  </div>
+
+  <div class="planet">
+    <div class="planet-ring"></div>
+  </div>
+
+  <div class="scroll-hint">
+    <div class="scroll-line"></div>
+    <span>Scroll</span>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-bar reveal">
+  <div class="stat-item">
+    <div class="stat-num" data-count="2157">0</div>
+    <div class="stat-label">Año de Misión</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num" data-count="847">0</div>
+    <div class="stat-label">Estrellas GitHub</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num" data-count="312">0</div>
+    <div class="stat-label">Forks Activos</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num" data-count="99">0</div>
+    <div class="stat-label">Contribuidores</div>
+  </div>
+</div>
+
+<!-- MISSIONS -->
+<section id="missions">
+  <div class="reveal">
+    <p class="section-label">// DIRECTIVA DE MISIÓN</p>
+    <h2 class="section-title">Operaciones<br/><span style="color:var(--nebula-cyan)">Estelares</span></h2>
+  </div>
+
+  <div class="missions-grid">
+    <div class="mission-card reveal">
+      <span class="mission-number">M-001</span>
+      <span class="mission-icon">🛸</span>
+      <h3 class="mission-title">Cartografía Orbital</h3>
+      <p class="mission-desc">Mapea sistemas estelares desconocidos usando algoritmos de triangulación cuántica. Cada commit amplía el mapa galáctico.</p>
+    </div>
+    <div class="mission-card reveal" style="transition-delay:0.1s">
+      <span class="mission-number">M-002</span>
+      <span class="mission-icon">🌌</span>
+      <h3 class="mission-title">Análisis de Nebulosas</h3>
+      <p class="mission-desc">Procesa datos espectrales de nebulosas para identificar exoplanetas habitables en la periferia de la galaxia.</p>
+    </div>
+    <div class="mission-card reveal" style="transition-delay:0.2s">
+      <span class="mission-number">M-003</span>
+      <span class="mission-icon">⚡</span>
+      <h3 class="mission-title">Reactor de Plasma</h3>
+      <p class="mission-desc">Optimiza los sistemas de propulsión mediante fusión de hidrógeno estelar. Pull requests bienvenidos.</p>
+    </div>
+    <div class="mission-card reveal" style="transition-delay:0.3s">
+      <span class="mission-number">M-004</span>
+      <span class="mission-icon">🔭</span>
+      <h3 class="mission-title">Observatorio Remoto</h3>
+      <p class="mission-desc">Interface de telemetría para 47 telescopios distribuidos en el cinturón de asteroides exterior.</p>
+    </div>
+    <div class="mission-card reveal" style="transition-delay:0.4s">
+      <span class="mission-number">M-005</span>
+      <span class="mission-icon">🤖</span>
+      <h3 class="mission-title">IA de Navegación</h3>
+      <p class="mission-desc">Sistema de inteligencia artificial entrenado en 10 millones de rutas hiperespaciales para navegación autónoma.</p>
+    </div>
+    <div class="mission-card reveal" style="transition-delay:0.5s">
+      <span class="mission-number">M-006</span>
+      <span class="mission-icon">📡</span>
+      <h3 class="mission-title">Red de Comunicación</h3>
+      <p class="mission-desc">Protocolo de transmisión cuántica de largo alcance. Latencia sub-lumínica entre sistemas estelares.</p>
+    </div>
+  </div>
+</section>
+
+<!-- GITHUB SECTION -->
+<section id="github" class="github-section">
+  <div class="reveal">
+    <p class="section-label">// REPOSITORIO ABIERTO</p>
+    <h2 class="section-title">Únete a la<br/><span style="color:var(--nebula-pink)">Tripulación</span></h2>
+  </div>
+
+  <div class="github-card reveal">
+    <span class="github-icon">🚀</span>
+    <div class="fork-badge">
+      <span>⬡</span> CÓDIGO ABIERTO // LICENCIA MIT
+    </div>
+    <h3>cosmonaut / void-explorer</h3>
+    <p>Fork este repositorio y comienza tu propia misión estelar. Agrega nuevas funcionalidades, reporta bugs desde el espacio profundo, o simplemente úsalo como base para tu próximo proyecto galáctico.</p>
+
+    <div class="terminal">
+      <div class="term-line"><span class="term-prompt">cosmonaut@void</span> <span class="term-cmd">~$</span> git clone https://github.com/tu-usuario/void-explorer.git</div>
+      <div class="term-line term-out">Clonando en 'void-explorer'...</div>
+      <div class="term-line term-out">remote: Contando objetos: 2157, listo.</div>
+      <div class="term-line"><span class="term-prompt">cosmonaut@void</span> <span class="term-cmd">~$</span> cd void-explorer && npm install</div>
+      <div class="term-line term-out">✓ Dependencias instaladas. Sistemas nominales.</div>
+      <div class="term-line"><span class="term-prompt">cosmonaut@void</span> <span class="term-cmd">~$</span> npm run launch<span class="term-cursor"></span></div>
+    </div>
+
+    <div style="display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; margin-top:1rem;">
+      <a href="https://github.com" target="_blank" class="btn-primary">⬡ Fork en GitHub</a>
+      <a href="#" class="btn-secondary">◈ Ver Código</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">✦ COSMONAUT</div>
+  <div class="footer-text">Coordenadas: 34.7°N 247.2°E // Sector Orión</div>
+  <div class="footer-links">
+    <a href="#">GitHub</a>
+    <a href="#">Docs</a>
+    <a href="#">MIT License</a>
+  </div>
+</footer>
+
+<script>
+  // CURSOR
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; cursor.style.left = mx+'px'; cursor.style.top = my+'px'; });
+  const animRing = () => {
+    rx += (mx - rx) * 0.12;
+    ry += (my - ry) * 0.12;
+    ring.style.left = rx+'px'; ring.style.top = ry+'px';
+    requestAnimationFrame(animRing);
+  };
+  animRing();
+  document.querySelectorAll('a, button, .mission-card').forEach(el => {
+    el.addEventListener('mouseenter', () => { cursor.style.width='20px'; cursor.style.height='20px'; ring.style.width='60px'; ring.style.height='60px'; cursor.style.background='var(--nebula-pink)'; });
+    el.addEventListener('mouseleave', () => { cursor.style.width='12px'; cursor.style.height='12px'; ring.style.width='36px'; ring.style.height='36px'; cursor.style.background='var(--nebula-cyan)'; });
+  });
+
+  // STARS
+  const canvas = document.getElementById('stars-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, stars = [];
+  const resize = () => {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  };
+  resize();
+  window.addEventListener('resize', resize);
+
+  const mkStar = () => ({
+    x: Math.random() * W,
+    y: Math.random() * H,
+    r: Math.random() * 1.5,
+    a: Math.random(),
+    s: Math.random() * 0.005 + 0.001,
+    d: Math.random() > 0.5 ? 1 : -1
+  });
+  for (let i = 0; i < 280; i++) stars.push(mkStar());
+
+  // Shooting stars
+  let shooters = [];
+  const mkShooter = () => ({
+    x: Math.random() * W,
+    y: Math.random() * H * 0.5,
+    len: Math.random() * 120 + 60,
+    speed: Math.random() * 8 + 6,
+    a: 1,
+    angle: Math.PI / 4 + (Math.random() * 0.3 - 0.15)
+  });
+
+  const drawStars = () => {
+    ctx.clearRect(0, 0, W, H);
+    stars.forEach(s => {
+      s.a += s.s * s.d;
+      if (s.a <= 0.1 || s.a >= 1) s.d *= -1;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(240,238,255,${s.a})`;
+      ctx.fill();
+    });
+    shooters.forEach((sh, i) => {
+      const grd = ctx.createLinearGradient(sh.x, sh.y, sh.x - Math.cos(sh.angle)*sh.len, sh.y - Math.sin(sh.angle)*sh.len);
+      grd.addColorStop(0, `rgba(33,232,212,${sh.a})`);
+      grd.addColorStop(1, 'transparent');
+      ctx.beginPath();
+      ctx.strokeStyle = grd;
+      ctx.lineWidth = 1.5;
+      ctx.moveTo(sh.x, sh.y);
+      ctx.lineTo(sh.x - Math.cos(sh.angle)*sh.len, sh.y - Math.sin(sh.angle)*sh.len);
+      ctx.stroke();
+      sh.x += Math.cos(sh.angle) * sh.speed;
+      sh.y += Math.sin(sh.angle) * sh.speed;
+      sh.a -= 0.015;
+      if (sh.a <= 0) shooters.splice(i, 1);
+    });
+    if (Math.random() < 0.005) shooters.push(mkShooter());
+    requestAnimationFrame(drawStars);
+  };
+  drawStars();
+
+  // REVEAL OBSERVER
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+  // COUNT UP
+  const countEls = document.querySelectorAll('[data-count]');
+  const countObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      const el = e.target;
+      const target = +el.dataset.count;
+      let current = 0;
+      const step = target / 60;
+      const timer = setInterval(() => {
+        current = Math.min(current + step, target);
+        el.textContent = Math.floor(current);
+        if (current >= target) clearInterval(timer);
+      }, 25);
+      countObs.unobserve(el);
+    });
+  }, { threshold: 0.5 });
+  countEls.forEach(el => countObs.observe(el));
+</script>
+</body>
+</html>
